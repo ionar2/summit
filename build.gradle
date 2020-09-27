@@ -1,0 +1,157 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+        maven {
+            name = 'gradle plugins'
+            url "https://plugins.gradle.org/m2/"
+        }
+        maven {
+            name = 'forge'
+            url = 'http://files.minecraftforge.net/maven'
+        }
+        maven {
+            name = 'SpongePowered'
+            url = 'http://repo.spongepowered.org/maven'
+        }
+        maven {
+            name = 'sonatype'
+            url = 'https://oss.sonatype.org/content/repositories/snapshots/'
+        }
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
+        classpath 'org.spongepowered:mixingradle:0.6-SNAPSHOT'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
+        classpath 'com.google.code.gson:gson:2.8.6'
+    }
+}
+
+apply plugin: 'net.minecraftforge.gradle.forge'
+apply plugin: 'org.spongepowered.mixin'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+version project.modVersion
+group project.modGroup // http://maven.apache.org/guides/mini/guide-naming-conventions.html
+
+sourceCompatibility = targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
+compileJava {
+    sourceCompatibility = targetCompatibility = '1.8'
+}
+
+minecraft {
+    version = project.forgeVersion
+    runDir = 'run'
+    mappings = project.mcpVersion
+    coreMod = 'com.salhack.summit.mixin.MixinLoaderForge'
+    makeObfSourceJar = false
+
+    replaceIn 'reference/Reference.java'
+    replace '${version}', project.version
+    replace '${mcversion}', project.minecraft.version
+    replace '${modVersion}', project.modVersion
+    replace '${version_minecraft}', project.version_minecraft
+    replace '${forgeVersion}', project.forgeVersion
+}
+
+repositories {
+    maven {
+        name = 'spongepowered-repo'
+        url = 'http://repo.spongepowered.org/maven/'
+    }
+    maven {
+        name = 'impactdevelopment-repo'
+        url = 'https://impactdevelopment.github.io/maven/'
+    }
+    maven {
+        name = 'swt-repo'
+        url = "http://maven-eclipse.github.io/maven"
+    }
+    maven {
+        name = "jitpack.io"
+        url = "https://jitpack.io"
+    }
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    compile group: "com.googlecode.json-simple", name: "json-simple", version: "1.1.1"
+    compile group: 'net.jodah', name: 'typetools', version: '0.5.0'
+    compile(group: 'org.reflections', name: 'reflections', version: '0.9.11')
+    {
+        exclude group: 'com.google.guava', module: 'guava'
+    }
+    compile 'club.minnced:java-discord-rpc:2.0.2'
+    compile 'com.github.cabaletta:baritone:1.2.14'
+    compile 'cabaletta:baritone-api:1.2'
+}
+
+processResources {
+    // this will ensure that this task is redone when the versions change.
+    inputs.property 'version', project.version
+    inputs.property 'mcversion', project.minecraft.version
+
+    // replace stuff in mcmod.info, nothing else
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+
+        // replace version and mcversion and much more
+        expand 'version': project.version,
+        'mcversion': project.minecraft.version,
+        'modVersion': project.modVersion,
+        'version_minecraft': project.version_minecraft,
+        'forgeVersion': project.forgeVersion
+
+    }
+
+    // copy everything else, thats not the mcmod.info
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+
+    // move _at.cfg into META-INF
+    rename '(.+_at.cfg)', 'META-INF/$1'
+}
+
+
+shadowJar {
+    dependencies {
+        include(dependency('club.minnced:java-discord-rpc'))
+        include(dependency('net.jodah:typetools'))
+        include(dependency('org.reflections:reflections'))
+        include(dependency('com.googlecode.json-simple:json-simple:1.1.1'))
+    }
+    exclude 'dummyThing'
+    exclude 'LICENSE.txt'
+    classifier = 'release'
+}
+
+
+mixin {
+    defaultObfuscationEnv searge
+    add sourceSets.main, 'mixins.summit.refmap.json'
+}
+
+reobf {
+    shadowJar {
+        mappingType = 'SEARGE'
+        classpath = sourceSets.main.compileClasspath
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+                'MixinConfigs': 'mixins.summit.json',
+                'tweakClass': 'org.spongepowered.asm.launch.MixinTweaker',
+                'TweakOrder': 0,
+                'FMLCorePluginContainsFMLMod': 'true',
+                'FMLCorePlugin': 'com.salhack.summit.mixin.MixinLoaderForge',
+                'ForceLoadAsMod': 'true',
+                'FMLAT': 'summit_at.cfg'
+        )
+    }
+}
+
+build.dependsOn(shadowJar)

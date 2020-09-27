@@ -1,0 +1,16 @@
+[
+    {
+      "modid": "summit",
+      "name": "Summit",
+      "description": "Summit utility mod.",
+      "version": "2.2",
+      "mcversion": "${version_minecraft}",
+      "url": "https://salhack.com",
+      "updateUrl": "https://salhack.com",
+      "authorList": [""],
+      "credits": "",
+      "logoFile": "assets/salhack/imgs/SalHackWatermark.png",
+      "screenshots": [],
+      "dependencies": []
+    }
+]
